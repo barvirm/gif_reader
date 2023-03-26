@@ -5,7 +5,7 @@ version = "0.1.0"
 edition = "2021"
 description = "Simple library for parsing GIF"
 authors = ["Marek Barvíř"]
-repository = ""
+repository = "https://github.com/barvirm/gif_reader"
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
