@@ -21,8 +21,8 @@ impl PlainTextExtension {
     pub(crate) fn from_bytes<T: Read>(reader: &mut T) -> Result<Self, GifParserError> {
         let data = reader
             .read_bytes::<13>()
-            .map_err(|e| PlainTextExtIo(e))
-            .map_err(|e| GifParserError::PlainTextExtIo(e))?;
+            .map_err(PlainTextExtIo)
+            .map_err(GifParserError::PlainTextExtIo)?;
 
         if data[0] != 0x0C {
             return Err(GifParserError::PlainTextExtInvalidBlockSize);
@@ -31,9 +31,9 @@ impl PlainTextExtension {
         let text = {
             let data = reader
                 .read_subblock()
-                .map_err(|e| PlainTextExtIo(e))
-                .map_err(|e| GifParserError::PlainTextExtIo(e))?;
-            String::from_utf8(data).map_err(|e| GifParserError::PlainTextExtInvalidUtf8(e))?
+                .map_err(PlainTextExtIo)
+                .map_err(GifParserError::PlainTextExtIo)?;
+            String::from_utf8(data).map_err(GifParserError::PlainTextExtInvalidUtf8)?
         };
 
         let text_grid_left = data[1..3].try_into().expect("Valid range for u16");

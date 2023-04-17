@@ -48,8 +48,8 @@ impl ImageDescriptor {
     pub(crate) fn from_bytes<T: Read>(reader: &mut T) -> Result<Self, GifParserError> {
         let data = reader
             .read_bytes::<9>()
-            .map_err(|e| ImageDescriptorIo(e))
-            .map_err(|e| GifParserError::ImageDescriptorIo(e))?;
+            .map_err(ImageDescriptorIo)
+            .map_err(GifParserError::ImageDescriptorIo)?;
 
         let left = u16::from_le_bytes(data[0..2].try_into().expect("Valid range for u16"));
         let top = u16::from_le_bytes(data[2..4].try_into().expect("Valid range for u16"));

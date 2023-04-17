@@ -54,8 +54,8 @@ impl GraphicsControlExtension {
     pub(crate) fn from_bytes<T: Read>(reader: &mut T) -> Result<Self, GifParserError> {
         let data = reader
             .read_bytes::<6>()
-            .map_err(|e| GraphicsControlExtIo(e))
-            .map_err(|e| GifParserError::GraphicsControlExtIo(e))?;
+            .map_err(GraphicsControlExtIo)
+            .map_err(GifParserError::GraphicsControlExtIo)?;
 
         let block_size = data[0];
         if block_size != 0x04 {

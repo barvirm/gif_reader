@@ -13,8 +13,8 @@ impl ApplicationExtension {
     pub(crate) fn from_bytes<T: Read>(reader: &mut T) -> Result<Self, GifParserError> {
         let data = reader
             .read_bytes::<12>()
-            .map_err(|e| AppExtIo(e))
-            .map_err(|e| GifParserError::AppExtIo(e))?;
+            .map_err(AppExtIo)
+            .map_err(GifParserError::AppExtIo)?;
 
         if data[0] != 0x0B {
             return Err(GifParserError::AppExtInvalidBlockSize);
@@ -22,8 +22,8 @@ impl ApplicationExtension {
 
         let app_data = reader
             .read_subblock()
-            .map_err(|e| AppExtIo(e))
-            .map_err(|e| GifParserError::AppExtIo(e))?;
+            .map_err(AppExtIo)
+            .map_err(GifParserError::AppExtIo)?;
 
         Ok(Self {
             identifier: data[1..9].try_into().expect("Valid range size [u8; 8]"),

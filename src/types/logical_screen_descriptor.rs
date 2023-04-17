@@ -36,8 +36,8 @@ impl LogicalScreenDescriptor {
     pub(crate) fn from_bytes<T: Read>(reader: &mut T) -> Result<Self, GifParserError> {
         let bytes = reader
             .read_bytes::<7>()
-            .map_err(|e| LogicalScreenDescriptorIo(e))
-            .map_err(|e| GifParserError::LogicalScreenDescriptorIo(e))?;
+            .map_err(LogicalScreenDescriptorIo)
+            .map_err(GifParserError::LogicalScreenDescriptorIo)?;
 
         Ok(Self {
             local_screen_width: u16::from_le_bytes(
