@@ -1,3 +1,5 @@
+use crate::error::GifParserError;
+
 #[derive(Debug)]
 pub enum ExtensionIdentifier {
     GraphicsControl = 0xF9,
@@ -6,7 +8,7 @@ pub enum ExtensionIdentifier {
     Comment = 0xFE,
 }
 impl TryFrom<u8> for ExtensionIdentifier {
-    type Error = &'static str;
+    type Error = GifParserError;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
@@ -14,7 +16,7 @@ impl TryFrom<u8> for ExtensionIdentifier {
             0x01 => Ok(ExtensionIdentifier::PlainText),
             0xFF => Ok(ExtensionIdentifier::Application),
             0xFE => Ok(ExtensionIdentifier::Comment),
-            _ => Err("Unknown extension identifier"),
+            _ => Err(GifParserError::UnknownExtensionIdentifier),
         }
     }
 }

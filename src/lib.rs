@@ -1,7 +1,7 @@
+mod error;
 mod parser;
 mod read_ext;
 mod types;
-
 pub use parser::{GifParser, GifParts};
 
 #[cfg(test)]

@@ -1,4 +1,7 @@
-use crate::read_ext::ReadExt;
+use crate::{
+    error::{GifParserError, GraphicsControlExtIo},
+    read_ext::ReadExt,
+};
 use std::io::Read;
 
 #[derive(Debug)]
@@ -10,16 +13,16 @@ pub enum Disposal {
 }
 
 impl TryFrom<u8> for Disposal {
-    type Error = &'static str;
+    type Error = GifParserError;
 
     fn try_from(value: u8) -> Result<Self, Self::Error> {
-        Ok(match value {
-            0 => Disposal::NoDisponse,
-            1 => Disposal::DontDispose,
-            2 => Disposal::RestoreBackground,
-            3 => Disposal::RestoreToPrevious,
-            _ => panic!("Unknow disposal"),
-        })
+        match value {
+            0 => Ok(Disposal::NoDisponse),
+            1 => Ok(Disposal::DontDispose),
+            2 => Ok(Disposal::RestoreBackground),
+            3 => Ok(Disposal::RestoreToPrevious),
+            _ => Err(GifParserError::UnknownDisposalMethod),
+        }
     }
 }
 
@@ -31,7 +34,7 @@ pub struct GraphicsControlPackedFields {
 }
 
 impl GraphicsControlPackedFields {
-    pub fn from_byte(byte: u8) -> Result<Self, &'static str> {
+    pub fn from_byte(byte: u8) -> Result<Self, GifParserError> {
         Ok(Self {
             transparent_color_flag: byte & 0b00000001 != 0,
             user_input: byte & 0b00000010 != 0,
@@ -48,23 +51,26 @@ pub struct GraphicsControlExtension {
 }
 
 impl GraphicsControlExtension {
-    pub(crate) fn from_bytes<T: Read>(reader: &mut T) -> Result<Self, &'static str> {
-        let data = reader.read_bytes::<6>().unwrap();
+    pub(crate) fn from_bytes<T: Read>(reader: &mut T) -> Result<Self, GifParserError> {
+        let data = reader
+            .read_bytes::<6>()
+            .map_err(|e| GraphicsControlExtIo(e))
+            .map_err(|e| GifParserError::GraphicsControlExtIo(e))?;
 
         let block_size = data[0];
         if block_size != 0x04 {
-            return Err("Graphics Control Extension has always size 0x04");
+            return Err(GifParserError::GraphicsControlExt);
         }
 
         let gce = GraphicsControlExtension {
             packed: GraphicsControlPackedFields::from_byte(data[1])?,
-            delay_time: u16::from_le_bytes(data[2..4].try_into().unwrap()),
+            delay_time: u16::from_le_bytes(data[2..4].try_into().expect("Valid range for u16")),
             transparent_color_index: data[4],
         };
 
         let terminator = data[5];
         if terminator != 0 {
-            return Err("Invalid terminator");
+            return Err(GifParserError::GraphicsControlExtInvalidTerminator);
         }
 
         Ok(gce)

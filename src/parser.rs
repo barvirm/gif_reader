@@ -1,3 +1,4 @@
+use crate::error::GifParserError;
 use crate::read_ext::{ReadExt, ReadSubBlockExt};
 use std::io::Read;
 use weezl::decode::Decoder as LzwDecoder;
@@ -37,6 +38,7 @@ pub enum GifParts {
     ImageData(Vec<u8>),
     ExtPlainText(PlainTextExtension),
     ExtComment(String),
+    Trailer,
 }
 
 pub struct GifParser<T: Read> {
@@ -69,16 +71,12 @@ impl<T: Read> GifParser<T> {
             BlockIdentifier::Trailer => State::Trailer,
         }
     }
-}
 
-impl<T: Read> Iterator for GifParser<T> {
-    type Item = Result<GifParts, &'static str>;
-
-    fn next(&mut self) -> Option<Self::Item> {
+    fn get_next_part(&mut self) -> Result<GifParts, GifParserError> {
         let part = match self.state {
-            State::Trailer => return None,
+            State::Trailer => GifParts::Trailer,
             State::Header => {
-                let header = Header::from_bytes(&mut self.reader).unwrap();
+                let header = Header::from_bytes(&mut self.reader)?;
 
                 self.state = State::LogicalScreenDescriptor;
                 GifParts::Header(header)
@@ -93,7 +91,7 @@ impl<T: Read> Iterator for GifParser<T> {
                 GifParts::LogicalScreenDescriptor(l)
             }
             State::GlobalColorTable(size) => {
-                let color_table = ColorTable::from_bytes(&mut self.reader, size);
+                let color_table = ColorTable::from_bytes(&mut self.reader, size).unwrap();
 
                 self.state = self.read_next_state();
                 GifParts::GlobalColorTable(color_table)
@@ -112,7 +110,7 @@ impl<T: Read> Iterator for GifParser<T> {
             }
 
             State::LocalColorTable(size) => {
-                let t = ColorTable::from_bytes(&mut self.reader, size);
+                let t = ColorTable::from_bytes(&mut self.reader, size).unwrap();
 
                 self.state = State::ImageData();
                 GifParts::LocalColorTable(t)
@@ -151,6 +149,20 @@ impl<T: Read> Iterator for GifParser<T> {
             }
         };
 
-        Some(Ok(part))
+        Ok(part)
+    }
+}
+
+impl<T: Read> Iterator for GifParser<T> {
+    type Item = Result<GifParts, GifParserError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.get_next_part() {
+            Ok(part) => match part {
+                GifParts::Trailer => None,
+                gif_part => Some(Ok(gif_part)),
+            },
+            Err(error) => Some(Err(error)),
+        }
     }
 }

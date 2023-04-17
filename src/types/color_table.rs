@@ -16,7 +16,7 @@ impl ColorTable {
         self.0.get(i.into())
     }
 
-    pub(crate) fn from_bytes<T: Read>(reader: &mut T, size: usize) -> ColorTable {
+    pub(crate) fn from_bytes<T: Read>(reader: &mut T, size: usize) -> std::io::Result<ColorTable> {
         let size = size * 3;
 
         let color_table = reader
@@ -30,6 +30,6 @@ impl ColorTable {
             })
             .collect();
 
-        Self(color_table)
+        Ok(Self(color_table))
     }
 }

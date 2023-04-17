@@ -1,4 +1,7 @@
-use crate::read_ext::ReadExt;
+use crate::{
+    error::{GifParserError, ImageDescriptorIo},
+    read_ext::ReadExt,
+};
 use std::io::Read;
 
 #[derive(Debug)]
@@ -42,14 +45,17 @@ pub struct ImageDescriptor {
 }
 
 impl ImageDescriptor {
-    pub(crate) fn from_bytes<T: Read>(reader: &mut T) -> Result<Self, &'static str> {
-        let data = reader.read_bytes::<9>().unwrap();
+    pub(crate) fn from_bytes<T: Read>(reader: &mut T) -> Result<Self, GifParserError> {
+        let data = reader
+            .read_bytes::<9>()
+            .map_err(|e| ImageDescriptorIo(e))
+            .map_err(|e| GifParserError::ImageDescriptorIo(e))?;
 
-        let left = u16::from_le_bytes(data[0..2].try_into().unwrap());
-        let top = u16::from_le_bytes(data[2..4].try_into().unwrap());
+        let left = u16::from_le_bytes(data[0..2].try_into().expect("Valid range for u16"));
+        let top = u16::from_le_bytes(data[2..4].try_into().expect("Valid range for u16"));
 
-        let width = u16::from_le_bytes(data[4..6].try_into().unwrap());
-        let height = u16::from_le_bytes(data[6..8].try_into().unwrap());
+        let width = u16::from_le_bytes(data[4..6].try_into().expect("Valid range for u16"));
+        let height = u16::from_le_bytes(data[6..8].try_into().expect("Valid range for u16"));
 
         let packed = PackedLocalFields::from_byte(data[8]);
 

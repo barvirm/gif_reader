@@ -1,3 +1,4 @@
+use crate::error::{AppExtIo, GifParserError};
 use crate::read_ext::{ReadExt, ReadSubBlockExt};
 use std::io::Read;
 
@@ -9,18 +10,24 @@ pub struct ApplicationExtension {
 }
 
 impl ApplicationExtension {
-    pub(crate) fn from_bytes<T: Read>(reader: &mut T) -> Result<Self, &'static str> {
-        let data = reader.read_bytes::<12>().unwrap();
+    pub(crate) fn from_bytes<T: Read>(reader: &mut T) -> Result<Self, GifParserError> {
+        let data = reader
+            .read_bytes::<12>()
+            .map_err(|e| AppExtIo(e))
+            .map_err(|e| GifParserError::AppExtIo(e))?;
 
         if data[0] != 0x0B {
-            return Err("Block size is always 0B in hex");
+            return Err(GifParserError::AppExtInvalidBlockSize);
         }
 
-        let app_data = reader.read_subblock().unwrap();
+        let app_data = reader
+            .read_subblock()
+            .map_err(|e| AppExtIo(e))
+            .map_err(|e| GifParserError::AppExtIo(e))?;
 
         Ok(Self {
-            identifier: data[1..9].try_into().unwrap(),
-            authent_code: data[9..].try_into().unwrap(),
+            identifier: data[1..9].try_into().expect("Valid range size [u8; 8]"),
+            authent_code: data[9..].try_into().expect("Valid range size [u8; 3]"),
             application_data: app_data,
         })
     }

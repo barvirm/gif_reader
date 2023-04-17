@@ -1,4 +1,7 @@
-use crate::read_ext::ReadExt;
+use crate::{
+    error::{GifParserError, LogicalScreenDescriptorIo},
+    read_ext::ReadExt,
+};
 use std::io::Read;
 
 #[derive(Debug)]
@@ -30,12 +33,19 @@ pub struct LogicalScreenDescriptor {
 }
 
 impl LogicalScreenDescriptor {
-    pub(crate) fn from_bytes<T: Read>(reader: &mut T) -> Result<Self, &'static str> {
-        let bytes = reader.read_bytes::<7>().unwrap();
+    pub(crate) fn from_bytes<T: Read>(reader: &mut T) -> Result<Self, GifParserError> {
+        let bytes = reader
+            .read_bytes::<7>()
+            .map_err(|e| LogicalScreenDescriptorIo(e))
+            .map_err(|e| GifParserError::LogicalScreenDescriptorIo(e))?;
 
         Ok(Self {
-            local_screen_width: u16::from_le_bytes(bytes[..2].try_into().unwrap()),
-            local_screen_height: u16::from_le_bytes(bytes[2..4].try_into().unwrap()),
+            local_screen_width: u16::from_le_bytes(
+                bytes[..2].try_into().expect("Valid range for u16"),
+            ),
+            local_screen_height: u16::from_le_bytes(
+                bytes[2..4].try_into().expect("Valid range for u16"),
+            ),
             packed_fields: PackedFields::from_byte(bytes[4]),
             background_color: bytes[5],
             pixel_aspect_ratio: bytes[6],
